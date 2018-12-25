@@ -20,7 +20,7 @@ chrome_options = webdriver.ChromeOptions()
 # chrome_options.add_experimental_option("prefs", prefs)
 # 初始化
 browser = webdriver.Chrome(executable_path=driver_path, chrome_options=chrome_options)
-init_url = r'http://jandan.net/ooxx/page-55#comments'
+init_url = r'http://jandan.net/ooxx/page-0#comments'
 browser.get(init_url)
 # 获得网页源码
 # soup = BeautifulSoup(browser.page_source, 'lxml')
@@ -33,9 +33,9 @@ if not os.path.isdir(file_path):
     os.mkdir(file_path)
 
 # 获得最大网页
-docs = doc.find('.current-comment-page').eq(1).text()
+docs = doc.find('.current-comment-page').eq(0).text()
 max_page = int(re.search(r'\d{2,}', docs).group())
-
+print(max_page)
 for page_num in range(max_page, 0, -1):
     f = furl(init_url)
     f.path.segments[-1] = 'page-{0}'.format(page_num)
@@ -44,14 +44,13 @@ for page_num in range(max_page, 0, -1):
         os.mkdir(paths)
 
     if page_num < max_page:
-        browser.get(f.url)
-        doc = pq(browser.page_source)
-        doc.remove_namespaces()
-
+	    browser.get(f.url)
+	    doc = pq(browser.page_source)
+	    doc.remove_namespaces()
     # 定位获取标签
     doc_text = doc.find('.commentlist').find('.text')
     # 迭代获取图片路径
-    for item in doc_text.items():
+    for idx, item in enumerate(doc_text.items()):
         f1 = furl(item('.view_img_link').attr('href'))
         f1.scheme = f.scheme
         resp = requests.get(f1.url)
@@ -60,7 +59,7 @@ for page_num in range(max_page, 0, -1):
         path_name = '煎蛋妹子/{0}/{1}'.format(page_num, f1.path.segments[-1])
         # 保存
         img.save('{0}'.format(path_name))
-        print('成功.......')
+        print('第{0}张完成.......'.format(idx+1))
     print('第{0}/{1}页完成'.format(page_num, max_page))
     if page_num == 50:
         break
