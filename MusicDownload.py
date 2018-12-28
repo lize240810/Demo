@@ -51,17 +51,20 @@ def mkdir(title, url):
     # 获取音乐的二进制文件
     title = title.replace('/', '-')
     print(title, '开始下载........')
-    music = requests.get(url)
     # 获取音乐的存储路径
     if not os.path.isdir('music'):
         os.mkdir('music')
     file_path = os.path.abspath('music')
     # 音乐存储的绝对路径
     music_path = os.path.join(file_path, '{}.mp3'.format(title))
-    # 保存音乐
-    with open(music_path, 'wb') as f:
-        f.write(music.content)
+    # import ipdb as pdb; pdb.set_trace()
+    if not os.path.isfile(music_path):
+        music = requests.get(url)
+        # 保存音乐
+        with open(music_path, 'wb') as f:
+            f.write(music.content)
     print(title, '存储完成......')
+
     
 
 def main():
@@ -72,9 +75,12 @@ def main():
     music = {}
     for href in dicts['hrefs']:
         html = gethtml(dictsmp3_url.format(href)).json()
-        music_name = html['data']['tracksAudioPlay'][0]['trackName']
-        music_href = html['data']['tracksAudioPlay'][0]['src']
-        mkdir(music_name, music_href)
+        for item in html['data']['tracksAudioPlay']:
+            music_name = item['trackName']
+            music_href = item['src']
+            mkdir(music_name, music_href)
+        
+        
 
 if __name__ == '__main__':
     main()
