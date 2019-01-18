@@ -92,6 +92,7 @@ class FangspiderSpider(scrapy.Spider):
                 yield scrapy.Request(response.urljoin(houses[item]), callback=house, dont_filter=True)
             else:
                 print('office写字楼')
+
     # 楼盘详细信息
     def parse_housing_describe(self, response):
         Housing_item = HousingPriceItem()
@@ -99,6 +100,8 @@ class FangspiderSpider(scrapy.Spider):
         text_template = '//div[text()[contains(., "{0}")]]/following-sibling::div[1]'
         # 建筑名称
         Housing_item['architecture_name'] = response.css('a.ts_linear::text').extract_first().strip()
+        # 楼盘链接
+        Housing_item['housing_url'] = response.url
 
         # 物业类型
         Housing_item['tenement_class'] = response.xpath(text_template.format('物业类别')+'/text()').extract_first().strip()
@@ -128,7 +131,12 @@ class FangspiderSpider(scrapy.Spider):
         # 换线位置
         Housing_item['location'] = response.xpath(text_template.format('环线位置')+'/text()').extract_first().strip()
         # 开发商
-        Housing_item['developers'] = response.xpath(text_template.format('商')+'/a/text()').extract_first().strip()
+        try:
+            developers = response.xpath(text_template.format('商')+'/a/text()').extract_first().strip()
+        except Exception as e:
+            developers = "暂无资料"
+        else:
+            Housing_item['developers'] = developers
         # 楼盘地址
         Housing_item['house_address'] = response.xpath(text_template.format('楼盘地址')+'/text()').extract_first().strip()
         
@@ -252,6 +260,8 @@ class FangspiderSpider(scrapy.Spider):
         HousingType = HousingTypeItem()
         # 楼盘名称
         HousingType['architecture_name'] = response.css('a.ts_linear::text').extract_first().strip()
+
+        HousingType['housing_type_url'] = response.url
         # 户型
         HousingType['house_class'] = response.css('ul#ListModel>li>p.tiaojian span.fl::text').extract()
         # 面积
@@ -281,6 +291,8 @@ class FangspiderSpider(scrapy.Spider):
         photoitem = HousingPhotoItem()
         # 楼盘名称
         photoitem['architecture_name'] = response.css('a.ts_linear::text').extract_first().strip()
+        photoitem['housing_photo_url'] = response.url
+
         photoitem['photos'] = list(
             zip(
                 response.css('ul#gaoqinglist>li a p::text').extract(), map(
@@ -298,6 +310,7 @@ class FangspiderSpider(scrapy.Spider):
         commentitem = HousingCommentItem()
         # 楼盘名称
         commentitem['architecture_name'] = response.css('a.ts_linear::text').extract_first().strip()
+        commentitem['housing_comment_url'] = response.url
         data = list(map(lambda item: item.strip(), response.css(".Comprehensive_score span::text").extract()))
         commentitem['grade'] = ''.join(list(filter(None, data)))
         print(commentitem.get('architecture_name'))

@@ -8,11 +8,14 @@
 import scrapy
 
 
+
 class HousingPriceItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
     # 小区名
     architecture_name = scrapy.Field()
+    # 小区网址
+    housing_url = scrapy.Field()
     # 房屋类型
     tenement_class = scrapy.Field()
     # 平均价格
@@ -87,13 +90,17 @@ class HousingTypeItem(scrapy.Item):
     house_link = scrapy.Field()
     house_type_photos = scrapy.Field()
     house_describe = scrapy.Field()
+    housing_type_url = scrapy.Field()
 
 class HousingPhotoItem(scrapy.Item):
     architecture_name = scrapy.Field()
     photos = scrapy.Field()
+    housing_photo_url = scrapy.Field()
 
 class HousingCommentItem(scrapy.Item):
     architecture_name = scrapy.Field()
     grade = scrapy.Field()
+    housing_comment_url = scrapy.Field()
     
+
 
