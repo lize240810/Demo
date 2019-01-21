@@ -12,6 +12,7 @@ class FangspiderSpider(scrapy.Spider):
     allowed_domains = ['cq.fang.com']
     start_urls = ['https://cq.newhouse.fang.com/house/s/']
     pool = redis.ConnectionPool(host='127.0.0.1', port=6379, db=0)
+    url_pool = redis.ConnectionPool(host='127.0.0.1', port=6379, db=1)
 
     def parse(self, response):
         # 获取全部区域
@@ -28,7 +29,7 @@ class FangspiderSpider(scrapy.Spider):
         Quyu_Name = quyu.css('::text').extract()
         Quyu_Url = quyu.css('::attr(href)').extract()
         # 创建redis 数据库客户端
-        client = redis.Redis(connection_pool=self.pool)
+        client = redis.Redis(connection_pool=self.pool, db=0)
         # 获取
         Quyu_dict = dict(zip(Quyu_Name, Quyu_Url))
         # import ipdb as pdb; pdb.set_trace()
@@ -69,6 +70,7 @@ class FangspiderSpider(scrapy.Spider):
         '''
             解析楼盘链接 获得一个楼盘的不同网页
         '''
+        client_url = redis.Redis(connection_pool=self.url_pool)
 
         text_template = '//div[@class="navleft tf"]/a[text()[contains(.,"{0}")]]/@href'
             # 获得楼盘的子链接
@@ -80,18 +82,21 @@ class FangspiderSpider(scrapy.Spider):
         }
         # 读取制定网页的数据
         for item in houses:
-            if houses[item]:
-                if item == 'houses_describe':
-                    house = self.parse_housing_describe
-                elif item == 'houses_type':
-                    house = self.parse_housing_type
-                if item == 'houses_photo':
-                    house = self.parse_housing_photo
-                if item == 'houses_comment':
-                    house = self.parse_housing_comment
-                yield scrapy.Request(response.urljoin(houses[item]), callback=house, dont_filter=True)
-            else:
-                print('office写字楼')
+            base_url = response.urljoin(houses[item])
+            if not client_url.exists(base_url):
+                client_url.set(base_url, item)
+                if houses[item]:
+                    if item == 'houses_describe':
+                        house = self.parse_housing_describe
+                    elif item == 'houses_type':
+                        house = self.parse_housing_type
+                    elif item == 'houses_photo':
+                        house = self.parse_housing_photo
+                    elif item == 'houses_comment':
+                        house = self.parse_housing_comment
+                    yield scrapy.Request(base_url, callback=house, dont_filter=True)
+                else:
+                    print('office写字楼')
 
     # 楼盘详细信息
     def parse_housing_describe(self, response):
@@ -250,7 +255,7 @@ class FangspiderSpider(scrapy.Spider):
         except Exception as e:
             tenement_company = '暂无资料'
         Housing_item['tenement_company'] = tenement_company
-        print(Housing_item.get('architecture_name'))
+        print('parse_housing_describe', Housing_item.get('architecture_name'))
         yield Housing_item
 
     def parse_housing_type(self, response):
@@ -282,7 +287,7 @@ class FangspiderSpider(scrapy.Spider):
         # 户型介绍
         HousingType['house_describe'] = response.css('ul#ListModel>li>a img::attr("alt")').extract()
         yield HousingType
-        print(HousingType.get('architecture_name'))
+        print('parse_housing_type', HousingType.get('architecture_name'))
 
     def parse_housing_photo(self, response):
         '''
@@ -300,7 +305,7 @@ class FangspiderSpider(scrapy.Spider):
                 ),response.css('ul#gaoqinglist>li a img::attr("src")').extract())
             )
         )
-        print(photoitem.get('architecture_name'))
+        print('parse_housing_photo', photoitem.get('architecture_name'))
         yield photoitem
 
     def parse_housing_comment(self, response):
@@ -313,6 +318,6 @@ class FangspiderSpider(scrapy.Spider):
         commentitem['housing_comment_url'] = response.url
         data = list(map(lambda item: item.strip(), response.css(".Comprehensive_score span::text").extract()))
         commentitem['grade'] = ''.join(list(filter(None, data)))
-        print(commentitem.get('architecture_name'))
+        print('parse_housing_comment', commentitem.get('architecture_name'))
         yield commentitem
  
